@@ -1,0 +1,5 @@
+[devvn]
+# 51.38.186.136 env=staging
+51.75.204.135 env=staging domain=stag1.ql6625.fr
+# 51.75.204.136 env=production domain=prod1.ql6625.fr
+

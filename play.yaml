@@ -1,0 +1,145 @@
+---
+- name: create users, install packages & start pm2 service for dev user
+  hosts: devvn
+  user: root
+  gather_facts: false
+  vars_files: vars.yaml
+
+  # tasks:
+  # - name: create dev user
+  #   user: name=dev group=dev shell=/bin/bash
+
+  # - name: copy public key
+  #   authorized_key: user=dev state=present key={{ lookup('file', '~/.ssh/id_rsa.pub') }}
+
+  # - name: ensure npm in installed
+  #   command: npm -v
+  #   register: npm_version
+  #   ignore_errors: true
+
+  # - name: download npm installer if needed
+  #   get_url: url=https://deb.nodesource.com/setup_10.x dest=/root/setup_10.x mode=0700
+  #   when: npm_version is failed
+
+  # - name: install npm if needed
+  #   command: /root/setup_10.x
+  #   when: npm_version is failed
+
+  # - name: install packages
+  #   apt: name={{ packages | join(',') }} state=latest update_cache=true
+
+  # - name: install global node modules
+  #   npm: name={{ item }} state=latest global=true
+  #   with_items: "{{ node_modules }}"
+
+  # - name: start pm2 service for dev user
+  #   command: env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u dev --hp /home/dev
+
+
+
+- name: setup nginx & letsencrypt
+  hosts: devvn
+  user: root
+  gather_facts: false
+  vars_files: vars.yaml
+
+  tasks:
+  - name: nginx enable server_names_hash_bucket_size
+    replace:
+      path: /etc/nginx/nginx.conf
+      regexp: "# server_names_hash_bucket_size.*$"
+      replace: server_names_hash_bucket_size 128;
+
+  - name: letsencrypt ensure .well-known directory
+    file: dest=/var/lib/letsencrypt/.well-known/ state=directory
+
+  - name: check whether certificates exist
+    command: stat /etc/letsencrypt/live/{{ domain }}/fullchain.pem
+    register: certificates_exist
+    ignore_errors: true
+
+  - name: nginx default without ssl
+    copy: src=files/default-without-ssl dest=/etc/nginx/sites-enabled/default
+    when: certificates_exist is failed
+
+  - name: nginx default
+    copy: src=files/default dest=/etc/nginx/sites-enabled/default
+    when: certificates_exist is success
+
+  - name: nginx sites without ssl
+    template: src=files/site-without-ssl dest=/etc/nginx/sites-enabled/{{ item.domain | domain(env) }}
+    with_items: "{{ sites }}"
+    when: certificates_exist is failed
+
+  - name: nginx sites
+    template: src=files/site dest=/etc/nginx/sites-enabled/{{ item.domain | domain(env) }}
+    with_items: "{{ sites }}"
+    when: certificates_exist is success
+
+  - name: test nginx
+    command: nginx -t
+
+  - name: restart nginx
+    service: name=nginx state=restarted
+
+  - name: start letsencrypt
+    command: "{{ sites | letsencrypt(env, domain) }}"
+
+  - name: default with ssl
+    copy: src=files/default dest=/etc/nginx/sites-enabled/default
+    when: certificates_exist is failed
+
+  - name: nginx sites
+    template: src=files/site dest=/etc/nginx/sites-enabled/{{ item.domain | domain(env) }}
+    with_items: "{{ sites }}"
+    when: certificates_exist is failed
+
+  - name: test nginx
+    command: nginx -t
+
+  - name: restart nginx
+    service: name=nginx state=restarted
+
+
+
+- name: create pm2 structure
+  hosts: devvn
+  user: dev
+  gather_facts: false
+  vars_files: vars.yaml
+
+  # tasks:
+  # - name: copy index
+  #   copy: src=files/index.php dest=/home/dev/index.php
+  # - name: copy adminer
+  #   copy: src=files/adminer.php dest=/home/dev/adminer.php
+
+  # - name: create pm2 structure
+  #   file: path=/home/dev/{{ item.domain | domain(env) }} state=directory
+  #   with_items: "{{ sites }}"
+
+  # - name: create app directory
+  #   file: path=/home/dev/{{ item.domain | domain(env) }}/app state=directory
+  #   with_items: "{{ sites }}"
+
+  # - name: copy config file
+  #   template: src=files/ecosystem.config.js dest=/home/dev/{{ item.domain | domain(env) }}/ecosystem.config.js
+  #   with_items: "{{ sites }}"
+
+  # # - name: make sure index is present
+  # #   file: path=/home/dev/{{ item.domain | domain(env) }}/app/index.js state=touch
+  # #   with_items: "{{ sites }}"
+
+  # # - name: start all services
+  # #   command: pm2 start ecosystem.config.js --env production
+  # #   register: pwd
+  # #   args:
+  # #     chdir: /home/dev/{{ item.domain | domain(env) }}
+  # #   with_items: "{{ sites }}"
+
+  # # - name: delete all services
+  # #   command: pm2 delete {{ item.domain | domain(env) }}
+  # #   with_items: "{{ sites }}"
+
+  # - name: save pm2
+  #   command: pm2 save

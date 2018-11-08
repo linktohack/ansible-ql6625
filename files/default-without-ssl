@@ -1,0 +1,14 @@
+# redirect to https
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+
+  server_name _;
+
+  location ^~ /.well-known {
+    allow all;
+    alias /var/lib/letsencrypt/.well-known/;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+}

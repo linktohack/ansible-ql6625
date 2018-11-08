@@ -1,0 +1,43 @@
+- packages:
+  - nginx
+  - php
+  - php-fpm
+  - php-mysqli
+  - mysql-client
+  - mysql-server
+  - vim
+  - git
+  - screen
+  - nodejs
+  - python-certbot-nginx
+- node_modules:
+  - pm2
+  - typescript
+  - tsc-watch
+- sites:
+  - domain: api.todo
+    port: 3000
+  - domain: backoffice.todo
+    port: 3001
+    serve: true
+  - domain: api.deneuville
+    port: 3010
+  - domain: borne.aixia
+    port: 3020
+    serve: true
+  - domain: api.knowsos
+    port: 3030
+  - domain: backoffice.knowsos
+    port: 3031
+    serve: true
+  - domain: api.mobility-management
+    port: 3040
+  - domain: backoffice.mobility-management
+    port: 3041
+    serve: true
+  - domain: api.boomerang
+    port: 3050
+    serve: true
+  - domain: backoffice.boomerang
+    port: 3051
+    serve: true

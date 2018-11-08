@@ -1,0 +1,15 @@
+# should not redirect to https
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  return 301 https://$host$request_uri;
+
+  server_name _;
+
+  location ^~ /.well-known {
+    allow all;
+    alias /var/lib/letsencrypt/.well-known/;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+}
